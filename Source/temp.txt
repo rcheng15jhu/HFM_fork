@@ -1,0 +1,4 @@
+    # def save(self):
+    #     np.savetxt("weights.csv", np.asarray(self.weights), delimiter=",")
+    #     np.savetxt("biases.csv" , np.asarray(self.biases) , delimiter=",")
+    #     np.savetxt("gammas.csv" , np.asarray(self.gammas) , delimiter=",")
