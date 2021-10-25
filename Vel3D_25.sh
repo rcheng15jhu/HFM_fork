@@ -13,4 +13,4 @@ source /data/apps/go.sh
 ml anaconda
 conda activate HFMtf1.15
 cd /home/rcheng15/HFM/HFM_fork/Source 
-python3.7 Vel3D.py
+python3.7 Vel3D_25.py

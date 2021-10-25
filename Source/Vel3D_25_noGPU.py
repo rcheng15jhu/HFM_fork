@@ -8,9 +8,6 @@ import scipy.io
 import time
 import sys
 
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
-
 from utilities import neural_net, Navier_Stokes_3D_2, \
                       tf_session, mean_squared_error, relative_error
     
@@ -183,7 +180,7 @@ if __name__ == "__main__":
     
     batch_size = 10000
     
-    layers = [4] + 20*[2*50] + [4]  # output: u v w p
+    layers = [4] + 25*[2*50] + [4]  # output: u v w p
     
     data_path = '/home/rcheng15/scr4_rni2/HFM/Quarter_higher_resolution/'
     safe_path = '/home/rcheng15/HFM/HFM_out/'
@@ -266,8 +263,8 @@ if __name__ == "__main__":
                 layers, batch_size,
                 Rey)
     
-    model.set_save_path(safe_path + 'model_20_1.ckpt')
-    model.train(total_time = 24, learning_rate=1e-3)
+    model.set_save_path(safe_path + 'model.ckpt')
+    model.train(total_time = 30, learning_rate=1e-3)
 
     # save model 
     
@@ -340,5 +337,5 @@ if __name__ == "__main__":
         print('Error w: %e' % (error_w))
 
     
-    scipy.io.savemat( safe_path + 'Vel3D_20_1_results_%s.mat' %(time.strftime('%d_%m_%Y')),
+    scipy.io.savemat( safe_path + 'Vel3D_results_%s.mat' %(time.strftime('%d_%m_%Y')),
                      {'U_pred':U_pred, 'V_pred':V_pred, 'W_pred':W_pred})

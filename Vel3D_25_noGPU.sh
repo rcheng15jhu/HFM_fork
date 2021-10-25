@@ -4,7 +4,6 @@
 #SBATCH --partition=a100
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=48
-#SBATCH --gres=gpu:1
 #SBATCH -A rni2_gpu
 #SBATCH --mail-type=end
 #SBATCH --mail-user=rcheng15@jhu.edu

@@ -3,3 +3,5 @@
 /[Rr]esults/
 /.idea/
 *.out
+*/__pycache__/
+*.code-workspace
