@@ -7,6 +7,7 @@ import numpy as np
 import scipy.io
 import time
 import sys
+from itertools import zip_longest
 
 from utilities import neural_net, Navier_Stokes_3D_2, \
                       tf_session, mean_squared_error, relative_error
@@ -177,10 +178,26 @@ class HFM(object):
 
 
 if __name__ == "__main__":
+    layers = [4]
+    print(f"Arguments count: {len(sys.argv)}")
+    if len(sys.argv) < 4 or len(sys.argv) % 2 != 0:
+        print("Wrong arguments!")
+        quit()
+    save_name = sys.argv[1]
+    print(f"save_name: {save_name}")
+    args = zip_longest(*[iter(sys.argv[2:])]*2)
+    i = 1
+    for num, size in args:
+        print(f"Group {i+1:>6}: {num, size}")
+        layers += int(num)*[int(size)]
+        i += 1
     
+    layers += [4]
+
     batch_size = 10000
     
-    layers = [4] + 25*[2*50] + [4]  # output: u v w p
+    # layers = [4] + 25*[2*50] + [4]  # output: u v w p
+    print(len(layers), layers)
     
     data_path = '/home/rcheng15/scr4_rni2/HFM/Quarter_higher_resolution/'
     safe_path = '/home/rcheng15/HFM/HFM_out/'
@@ -337,5 +354,5 @@ if __name__ == "__main__":
         print('Error w: %e' % (error_w))
 
     
-    scipy.io.savemat( safe_path + 'Vel3D_results_%s.mat' %(time.strftime('%d_%m_%Y')),
+    scipy.io.savemat( safe_path + f"Vel3D_results_{time.strftime('%d_%m_%Y')}.mat",
                      {'U_pred':U_pred, 'V_pred':V_pred, 'W_pred':W_pred})
