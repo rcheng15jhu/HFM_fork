@@ -3,6 +3,7 @@
 """
 
 import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 import numpy as np
 import scipy.io
 import time
@@ -280,7 +281,7 @@ if __name__ == "__main__":
                 layers, batch_size,
                 Rey)
     
-    model.set_save_path(safe_path + 'model.ckpt')
+    model.set_save_path(safe_path + f'{save_name}_model.ckpt')
     model.train(total_time = 30, learning_rate=1e-3)
 
     # save model 
@@ -354,5 +355,5 @@ if __name__ == "__main__":
         print('Error w: %e' % (error_w))
 
     
-    scipy.io.savemat( safe_path + f"Vel3D_results_{time.strftime('%d_%m_%Y')}.mat",
+    scipy.io.savemat( safe_path + f"Vel3D_{save_name}_results_{time.strftime('%d_%m_%Y')}.mat",
                      {'U_pred':U_pred, 'V_pred':V_pred, 'W_pred':W_pred})
