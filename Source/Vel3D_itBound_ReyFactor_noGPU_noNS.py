@@ -3,11 +3,12 @@
 """
 
 import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 import numpy as np
 import scipy.io
 import time
 import sys
-
+from itertools import zip_longest
 
 from utilities import neural_net, Navier_Stokes_3D_2, \
                       tf_session, mean_squared_error, relative_error
@@ -21,7 +22,7 @@ class HFM(object):
     # _star: preditions
     
     def __init__(self, t_data, x_data, y_data, z_data, u_data, v_data, w_data,
-                       t_eqns, x_eqns, y_eqns, z_eqns,
+                    #    t_eqns, x_eqns, y_eqns, z_eqns,
                        layers, batch_size,
                        Rey):
         
@@ -34,11 +35,11 @@ class HFM(object):
         
         # data
         [self.t_data, self.x_data, self.y_data, self.z_data, self.u_data, self.v_data, self.w_data] = [t_data, x_data, y_data, z_data, u_data, v_data, w_data]
-        [self.t_eqns, self.x_eqns, self.y_eqns, self.z_eqns] = [t_eqns, x_eqns, y_eqns, z_eqns]
+        # [self.t_eqns, self.x_eqns, self.y_eqns, self.z_eqns] = [t_eqns, x_eqns, y_eqns, z_eqns]
         
         # placeholders
         [self.t_data_tf, self.x_data_tf, self.y_data_tf, self.z_data_tf, self.u_data_tf, self.v_data_tf, self.w_data_tf] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(7)]
-        [self.t_eqns_tf, self.x_eqns_tf, self.y_eqns_tf, self.z_eqns_tf] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(4)]
+        # [self.t_eqns_tf, self.x_eqns_tf, self.y_eqns_tf, self.z_eqns_tf] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(4)]
         
         # physics "uninformed" neural networks
         self.net_cuvwp = neural_net(self.t_data, self.x_data, self.y_data, self.z_data, layers = self.layers)
@@ -52,35 +53,35 @@ class HFM(object):
                                             self.z_data_tf)
          
         # physics "informed" neural networks
-        [self.u_eqns_pred,
-         self.v_eqns_pred,
-         self.w_eqns_pred,
-         self.p_eqns_pred] = self.net_cuvwp(self.t_eqns_tf,
-                                            self.x_eqns_tf,
-                                            self.y_eqns_tf,
-                                            self.z_eqns_tf)
+        # [self.u_eqns_pred,
+        #  self.v_eqns_pred,
+        #  self.w_eqns_pred,
+        #  self.p_eqns_pred] = self.net_cuvwp(self.t_eqns_tf,
+        #                                     self.x_eqns_tf,
+        #                                     self.y_eqns_tf,
+        #                                     self.z_eqns_tf)
         
-        [self.e1_eqns_pred,
-         self.e2_eqns_pred,
-         self.e3_eqns_pred,
-         self.e4_eqns_pred] = Navier_Stokes_3D_2(self.u_eqns_pred,
-                                               self.v_eqns_pred,
-                                               self.w_eqns_pred,
-                                               self.p_eqns_pred,
-                                               self.t_eqns_tf,
-                                               self.x_eqns_tf,
-                                               self.y_eqns_tf,
-                                               self.z_eqns_tf,
-                                               self.Rey)
+        # [self.e1_eqns_pred,
+        #  self.e2_eqns_pred,
+        #  self.e3_eqns_pred,
+        #  self.e4_eqns_pred] = Navier_Stokes_3D_2(self.u_eqns_pred,
+        #                                        self.v_eqns_pred,
+        #                                        self.w_eqns_pred,
+        #                                        self.p_eqns_pred,
+        #                                        self.t_eqns_tf,
+        #                                        self.x_eqns_tf,
+        #                                        self.y_eqns_tf,
+        #                                        self.z_eqns_tf,
+        #                                        self.Rey)
         
         # loss
         self.loss = 100 * (mean_squared_error(self.u_data_pred, self.u_data_tf) + \
                     mean_squared_error(self.v_data_pred, self.v_data_tf) + \
-                    mean_squared_error(self.w_data_pred, self.w_data_tf) ) + \
-                    10 * (mean_squared_error(self.e1_eqns_pred, 0.0) + \
-                    mean_squared_error(self.e2_eqns_pred, 0.0) + \
-                    mean_squared_error(self.e3_eqns_pred, 0.0) + \
-                    mean_squared_error(self.e4_eqns_pred, 0.0)) 
+                    mean_squared_error(self.w_data_pred, self.w_data_tf) ) # + \
+                    # 10 * (mean_squared_error(self.e1_eqns_pred, 0.0) + \
+                    # mean_squared_error(self.e2_eqns_pred, 0.0) + \
+                    # mean_squared_error(self.e3_eqns_pred, 0.0) + \
+                    # mean_squared_error(self.e4_eqns_pred, 0.0)) 
         
         # optimizers
         self.learning_rate = tf.placeholder(tf.float32, shape=[])
@@ -92,18 +93,18 @@ class HFM(object):
         self.saver = tf.train.Saver()
         self.save_path = ''
     
-    def train(self, total_time, learning_rate):
+    def train(self, total_time, total_it, learning_rate):
         
         N_data = self.t_data.shape[0]
-        N_eqns = self.t_eqns.shape[0]
+        # N_eqns = self.t_eqns.shape[0]
         
         start_time = time.time()
         running_time = 0
         it = 0
-        while running_time < total_time:
+        while running_time < total_time and it <= total_it:
             
             idx_data = np.random.choice(N_data, self.batch_size)
-            idx_eqns = np.random.choice(N_eqns, self.batch_size)
+            # idx_eqns = np.random.choice(N_eqns, self.batch_size)
             
             (t_data_batch,
              x_data_batch,
@@ -119,13 +120,13 @@ class HFM(object):
                               self.v_data[idx_data,:],
                               self.w_data[idx_data,:])
 
-            (t_eqns_batch,
-             x_eqns_batch,
-             y_eqns_batch,
-             z_eqns_batch) = (self.t_eqns[idx_eqns,:],
-                              self.x_eqns[idx_eqns,:],
-                              self.y_eqns[idx_eqns,:],
-                              self.z_eqns[idx_eqns,:])
+            # (t_eqns_batch,
+            #  x_eqns_batch,
+            #  y_eqns_batch,
+            #  z_eqns_batch) = (self.t_eqns[idx_eqns,:],
+            #                   self.x_eqns[idx_eqns,:],
+            #                   self.y_eqns[idx_eqns,:],
+            #                   self.z_eqns[idx_eqns,:])
 
             tf_dict = {self.t_data_tf: t_data_batch,
                        self.x_data_tf: x_data_batch,
@@ -134,10 +135,10 @@ class HFM(object):
                        self.u_data_tf: u_data_batch,
                        self.v_data_tf: v_data_batch,
                        self.w_data_tf: w_data_batch,
-                       self.t_eqns_tf: t_eqns_batch,
-                       self.x_eqns_tf: x_eqns_batch,
-                       self.y_eqns_tf: y_eqns_batch,
-                       self.z_eqns_tf: z_eqns_batch,
+                    #    self.t_eqns_tf: t_eqns_batch,
+                    #    self.x_eqns_tf: x_eqns_batch,
+                    #    self.y_eqns_tf: y_eqns_batch,
+                    #    self.z_eqns_tf: z_eqns_batch,
                        self.learning_rate: learning_rate}
             
             self.sess.run([self.train_op], tf_dict)
@@ -178,16 +179,35 @@ class HFM(object):
 
 
 if __name__ == "__main__":
+    layers = [4]
+    print(f"Arguments count: {len(sys.argv)}")
+    if len(sys.argv) < 6 or len(sys.argv) % 2 != 0:
+        print("Wrong arguments!")
+        quit()
+    save_name  = sys.argv[1]
+    num_it     = int(sys.argv[2])
+    Rey_factor = int(sys.argv[3])
+    print(f"save_name: {save_name}, num_it: {num_it}, Rey_factor: {Rey_factor}")
+    args = zip_longest(*[iter(sys.argv[4:])]*2)
+    i = 1
+    for num, size in args:
+        print(f"Group {i+1:>6}: {num, size}")
+        layers += int(num)*[int(size)]
+        i += 1
     
+    layers += [4]
+
     batch_size = 10000
     
-    layers = [4] + 25*[2*50] + [4]  # output: u v w p
+    # layers = [4] + 25*[2*50] + [4]  # output: u v w p
+    print(len(layers), layers)
     
     data_path = '/home/rcheng15/scr4_rni2/HFM/Quarter_higher_resolution/'
+    safe_path = '/home/rcheng15/HFM/HFM_out/'
     # Load Data
     data = scipy.io.loadmat(data_path + 'velfield.mat')
 
-    Rey = data['Re']
+    Rey = data['Re'] * Rey_factor  # 2, 1.5
     
     # grids for measured points
     t_star = data['t_star'] # T x 1
@@ -215,10 +235,10 @@ if __name__ == "__main__":
     X_star = np.tile(x_star, (1,T)) # N x T
     Y_star = np.tile(y_star, (1,T)) # N x T
     Z_star = np.tile(z_star, (1,T)) # N x T
-    T_eqn_star = np.tile(t_star, (1,M)).T
-    X_eqn_star = np.tile(x, (1,T)) # M x T
-    Y_eqn_star = np.tile(y, (1,T)) # M x T
-    Z_eqn_star = np.tile(z, (1,T)) # M x T
+    # T_eqn_star = np.tile(t_star, (1,M)).T
+    # X_eqn_star = np.tile(x, (1,T)) # M x T
+    # Y_eqn_star = np.tile(y, (1,T)) # M x T
+    # Z_eqn_star = np.tile(z, (1,T)) # M x T
 
         
     ######################################################################
@@ -248,36 +268,36 @@ if __name__ == "__main__":
     #w_data = np.array(tracks[idx_x, 7]).flatten()[:,None]
 
     
-    T_eqns = T
-    M_eqns = M
-    idx_t = np.concatenate([np.array([0]), np.random.choice(T-2, T_eqns-2, replace=False)+1, np.array([T-1])] )
-    idx_x = np.random.choice(M, M_eqns, replace=False)
-    t_eqns = T_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
-    x_eqns = X_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
-    y_eqns = Y_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
-    z_eqns = Z_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
+    # T_eqns = T
+    # M_eqns = M
+    # idx_t = np.concatenate([np.array([0]), np.random.choice(T-2, T_eqns-2, replace=False)+1, np.array([T-1])] )
+    # idx_x = np.random.choice(M, M_eqns, replace=False)
+    # t_eqns = T_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
+    # x_eqns = X_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
+    # y_eqns = Y_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
+    # z_eqns = Z_eqn_star[:, idx_t][idx_x,:].flatten()[:,None]
         
     # Training
     model = HFM(t_data, x_data, y_data, z_data, u_data, v_data, w_data,
-                t_eqns, x_eqns, y_eqns, z_eqns,
+                # t_eqns, x_eqns, y_eqns, z_eqns,
                 layers, batch_size,
                 Rey)
     
-    model.set_save_path(data_path + 'model.ckpt')
-    model.train(total_time = 30, learning_rate=1e-3)
+    model.set_save_path(safe_path + f'{save_name}_model.ckpt')
+    model.train(total_time = 30, total_it = num_it, learning_rate=1e-3)
 
     # save model 
     
     # load model
     #sess = tf.Session()
-    #saver = tf.train.import_meta_graph(data_path + 'model.ckpt.meta')
-    #saver.restore(sess, tf.train.latest_checkpoint(data_path))
+    #saver = tf.train.import_meta_graph(safe_path + 'model.ckpt.meta')
+    #saver.restore(sess, tf.train.latest_checkpoint(safe_path))
     #model_save = HFM(t_data, x_data, y_data, z_data, c_data,
     #            t_eqns, x_eqns, y_eqns, z_eqns,
     #            layers, batch_size,
     #            Pec = 100, Rey = 100)
-    #model.saver = tf.train.import_meta_graph(data_path + 'model.ckpt.meta')
-    #model.saver.restore(model.sess, tf.train.latest_checkpoint(data_path))
+    #model.saver = tf.train.import_meta_graph(safe_path + 'model.ckpt.meta')
+    #model.saver.restore(model.sess, tf.train.latest_checkpoint(safe_path))
 
     # Test Data
     snap = np.array([100])
@@ -337,5 +357,5 @@ if __name__ == "__main__":
         print('Error w: %e' % (error_w))
 
     
-    scipy.io.savemat( data_path + 'Vel3D_25_results_%s.mat' %(time.strftime('%d_%m_%Y')),
+    scipy.io.savemat( safe_path + f"Vel3D_{save_name}_itBound_{num_it}_results_{time.strftime('%d_%m_%Y')}.mat",
                      {'U_pred':U_pred, 'V_pred':V_pred, 'W_pred':W_pred})
