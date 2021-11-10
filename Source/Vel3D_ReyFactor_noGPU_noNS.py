@@ -93,7 +93,7 @@ class HFM(object):
         self.saver = tf.train.Saver()
         self.save_path = ''
     
-    def train(self, total_time, total_it, learning_rate):
+    def train(self, total_time, learning_rate):
         
         N_data = self.t_data.shape[0]
         # N_eqns = self.t_eqns.shape[0]
@@ -101,7 +101,7 @@ class HFM(object):
         start_time = time.time()
         running_time = 0
         it = 0
-        while running_time < total_time and it <= total_it:
+        while running_time < total_time:
             
             idx_data = np.random.choice(N_data, self.batch_size)
             # idx_eqns = np.random.choice(N_eqns, self.batch_size)
